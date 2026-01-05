@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>BrightSign Slave - Synchronized Player</title>
+    <link rel="stylesheet" href="styles/main.css" />
+  </head>
+  <body>
+    <!-- Video player (oculto inicialmente) -->
+    <video id="player" loop preload="auto">
+      <source src="media/video.mp4" type="video/mp4" />
+    </video>
+
+    <!-- Overlay de espera -->
+    <div id="waitingOverlay" class="waiting-overlay">
+      <div class="waiting-message">Waiting for Master Signal</div>
+      <div id="clockDisplay" class="clock-display">--:--:--</div>
+      <div class="status-info">
+        <div>
+          <span id="syncIndicator" class="sync-indicator"></span>Connection:
+          <span id="connectionStatus">Connecting...</span>
+        </div>
+        <div>Clock Sync: <span id="clockSync">---</span></div>
+        <div>Network Delay: <span id="networkDelay">---</span></div>
+        <div>Sync Quality: <span id="syncQuality">---</span></div>
+      </div>
+    </div>
+
+    <!-- iframe para mostrar contenido externo -->
+    <iframe
+      id="externalContent"
+      style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: none; z-index: 9999"
+    ></iframe>
+
+    <!-- Scripts Modularizados -->
+    <script src="js/utils.js"></script>
+    <script src="js/clock-sync.js"></script>
+    <script src="js/master-connection.js"></script>
+    <!-- <script src="js/dashboard-connection.js"></script> -->
+    <script src="js/player.js"></script>
+    <script src="js/clock.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

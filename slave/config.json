@@ -1,0 +1,13 @@
+{
+  "slave": {
+    "deviceId": "slave-brightsign-1",
+    "masterHost": "192.168.1.250",
+    "masterPort": 8081,
+    "reconnectDelay": 3000,
+    "heartbeatInterval": 8000,
+    "verboseLogging": true
+  },
+  "externalApp": {
+    "url": "http://192.168.1.9:5173"
+  }
+}

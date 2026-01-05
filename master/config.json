@@ -1,0 +1,15 @@
+{
+  "master": {
+    "slaveServerPort": 8081,
+    "syncDelayMs": 800,
+    "maxSyncAttempts": 5,
+    "verboseLogging": true,
+    "expectedSlaves": 1
+  },
+  "media": {
+    "videoPath": "video.mp4"
+  },
+  "externalApp": {
+    "url": "http://192.168.1.9:5173"
+  }
+}
