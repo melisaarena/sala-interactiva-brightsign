@@ -2,19 +2,23 @@
 
 (function() {
 
-const { log } = window.SlaveUtils;
+const { log } = window.Utils;
 
-class SlaveClock {
-  constructor(clockSync) {
-    this.clockSync = clockSync;
+class Clock {
+  constructor() {
     this.clockInterval = null;
+  }
+
+  init() {
+    this.start();
   }
 
   start() {
     this.stop();
+    this.updateClock(); // Actualizar inmediatamente
     this.clockInterval = setInterval(() => {
       this.updateClock();
-    }, 16);
+    }, 1000); // Actualizar cada segundo
   }
 
   stop() {
@@ -28,19 +32,23 @@ class SlaveClock {
     const element = document.getElementById('clockDisplay');
     if (!element) return;
     
-    const currentTime = this.clockSync.clockSynced ? this.clockSync.getSyncedTime() : Date.now();
-    const date = new Date(currentTime);
+    const date = new Date();
     
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
-    const milliseconds = String(date.getMilliseconds()).padStart(3, '0');
 
-    element.textContent = `${hours}:${minutes}:${seconds}.${milliseconds}`;
-    element.style.color = this.clockSync.clockSynced ? '#00FF00' : '#FFFFFF';
+    element.textContent = `${hours}:${minutes}:${seconds}`;
   }
 }
 
-window.SlaveClock = SlaveClock;
+// Crear instancia global
+const clockInstance = new Clock();
+
+window.Clock = {
+  init: () => clockInstance.init(),
+  start: () => clockInstance.start(),
+  stop: () => clockInstance.stop()
+};
 
 })();

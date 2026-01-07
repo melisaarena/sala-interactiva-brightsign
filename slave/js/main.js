@@ -1,125 +1,146 @@
-// ===== Coordinador Principal =====
-
+/**
+ * Main Entry Point for Slave BrightSign
+ * Connects to Master BrightSign WebSocket server
+ */
 (function() {
 
-const { log, loadConfig } = window.SlaveUtils;
+const { log, loadConfig } = window.Utils;
 
-let clockSync, masterConnection, player, clock;
+let masterConnection = null;
 
-window.onload = function() {
+// Esperar a que el DOM esté listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSystem);
+} else {
+  initSystem();
+}
+
+async function initSystem() {
   try {
-    log('[MAIN] Slave device iniciando');
+    log('[MAIN] 🚀 Iniciando sistema Slave');
+
+    const config = loadConfig();
+    if (!config) {
+      log('[ERROR] No se pudo cargar la configuración');
+      return;
+    }
+
+    // 1. Iniciar reloj
+    if (window.Clock && window.Clock.init) {
+      window.Clock.init();
+      log('[MAIN] ⏰ Reloj inicializado');
+    }
+
+    // 2. Crear conexión con el Master
+    log('[MAIN] 📡 Conectando al Master...');
+    masterConnection = new window.MasterConnection(config);
     
-    window.deviceConfig = loadConfig();
-    
-    const deviceIdElement = document.getElementById('deviceId');
-    if (deviceIdElement) {
-      deviceIdElement.textContent = window.deviceConfig.deviceId;
+    // 3. Configurar callback para actualización de estado
+    if (masterConnection.setStatusUpdateCallback) {
+      masterConnection.setStatusUpdateCallback(updateConnectionStatus);
     }
     
-    clockSync = new window.ClockSync();
-    masterConnection = new window.MasterConnection(clockSync);
+    // 4. Conectar al Master
     masterConnection.connect();
     
-    player = new window.SlavePlayer(clockSync, masterConnection);
-    player.init();
+    // 5. Esperar 2 segundos para sincronización inicial
+    setTimeout(() => {
+      // 6. Cargar React app en iframe
+      loadExternalApp(config);
+    }, 2000);
     
-    masterConnection.onSyncCommand = (message) => {
-      switch (message.type) {
-        case 'sync_exact_start':
-        case 'sync_prepare':
-          player.scheduleExactPlayback(message);
-          break;
-        case 'sync_stop':
-          player.handleSyncStop();
-          break;
-        case 'sync_pause':
-          player.handleSyncPause();
-          break;
-        case 'show_external_app':
-          showExternalApp();
-          break;
-        case 'hide_external_app':
-          hideExternalApp();
-          break;
-        case 'show_menu_only':
-          showMenuOnly();
-          break;
-        case 'navigate_iframe':
-          navigateIframe(message.keyCode);
-          break;
-      }
-    };
-    
-    clock = new window.SlaveClock(clockSync);
-    clock.start();
-    
-    log('[MAIN] Slave device iniciado');
-    
+    // 7. Escuchar mensajes del iframe (React app)
+    window.addEventListener('message', handleIframeMessage);
+
+    log('[MAIN] ✅ Sistema Slave inicializado');
+
   } catch (err) {
-    log(`[MAIN] Error fatal: ${err.message}`);
+    log('[ERROR] initSystem: ' + err.message);
   }
-};
+}
 
-function showExternalApp() {
-  try {
-    const iframe = document.getElementById('externalContent');
-    if (!iframe) return;
+/**
+ * Manejar mensajes del iframe (React app)
+ */
+function handleIframeMessage(event) {
+  const message = event.data;
+  
+  if (!message || !message.type) return;
+  
+  log('[MAIN] 📨 Mensaje del iframe:', message.type);
+  
+  // Los slaves generalmente solo reciben, no envían
+  // Pero pueden reportar al Master si es necesario
+}
 
-    const config = window.deviceConfig;
-    const targetUrl = config.externalApp?.url || '';
-    
-    iframe.src = targetUrl;
-    iframe.style.display = 'block';
-    
-    const video = document.getElementById('player');
-    if (video && !video.paused) {
-      video.pause();
+/**
+ * Cargar app externa (React) en iframe
+ */
+function loadExternalApp(config) {
+  const iframe = document.getElementById('externalContent');
+  if (!iframe) {
+    log('[ERROR] iframe externalContent no encontrado');
+    return;
+  }
+
+  const appUrl = config.externalApp?.url || 'http://192.168.1.14:5173';
+  const projectorIndex = config.projector?.index || 2;
+  
+  // Build URL with projector parameter
+  const fullUrl = `${appUrl}/brightsign/display?projectorIndex=${projectorIndex}`;
+  
+  log('[MAIN] 📺 Cargando app externa:', fullUrl);
+  iframe.src = fullUrl;
+  
+  // Hide waiting overlay and show iframe
+  const waitingOverlay = document.getElementById('waitingOverlay');
+  if (waitingOverlay) {
+    waitingOverlay.style.display = 'none';
+  }
+  
+  iframe.style.display = 'block';
+}
+
+/**
+ * Actualizar estado de conexión en UI
+ */
+function updateConnectionStatus(status) {
+  const connectionStatusElement = document.getElementById('connectionStatus');
+  const syncIndicatorElement = document.getElementById('syncIndicator');
+  const clockSyncElement = document.getElementById('clockSync');
+  const networkDelayElement = document.getElementById('networkDelay');
+  const syncQualityElement = document.getElementById('syncQuality');
+  
+  if (connectionStatusElement) {
+    if (status.connected) {
+      connectionStatusElement.textContent = 'Connected';
+      connectionStatusElement.className = 'status-connected';
+    } else {
+      connectionStatusElement.textContent = 'Connecting...';
+      connectionStatusElement.className = 'status-disconnected';
     }
-  } catch (err) {
-    log('[SLAVE] Error showExternalApp: ' + err.message);
+  }
+  
+  if (syncIndicatorElement) {
+    syncIndicatorElement.className = status.connected ? 'sync-indicator connected' : 'sync-indicator';
+  }
+  
+  if (clockSyncElement && status.clockSync !== undefined) {
+    const clockDiff = Math.round(status.clockSync);
+    clockSyncElement.textContent = `${clockDiff}ms`;
+    clockSyncElement.className = Math.abs(clockDiff) < 50 ? 'sync-good' : 'sync-warning';
+  }
+  
+  if (networkDelayElement && status.networkDelay !== undefined) {
+    networkDelayElement.textContent = `${Math.round(status.networkDelay)}ms`;
+  }
+  
+  if (syncQualityElement && status.syncQuality) {
+    syncQualityElement.textContent = status.syncQuality;
+    syncQualityElement.className = `quality-${status.syncQuality.toLowerCase()}`;
   }
 }
 
-function hideExternalApp() {
-  try {
-    const iframe = document.getElementById('externalContent');
-    if (iframe && iframe.style.display !== 'none') {
-      iframe.style.display = 'none';
-    }
-  } catch (err) {
-    log('[SLAVE] Error hideExternalApp: ' + err.message);
-  }
-}
-
-function showMenuOnly() {
-  try {
-    const iframe = document.getElementById('externalContent');
-    if (!iframe) return;
-
-    iframe.style.display = 'block';
-  } catch (err) {
-    log('[SLAVE] Error showMenuOnly: ' + err.message);
-  }
-}
-
-function navigateIframe(keyCode) {
-  try {
-    const iframe = document.getElementById('externalContent');
-    if (!iframe?.contentWindow) return;
-
-    iframe.contentWindow.postMessage({
-      type: 'keydown',
-      keyCode: keyCode
-    }, '*');
-  } catch (err) {
-    log('[SLAVE] Error navigateIframe: ' + err.message);
-  }
-}
-
-window.onerror = function(message, source, lineno) {
-  log(`[ERROR] ${message} en ${source}:${lineno}`);
-  return true;
-};
+log('[MAIN] 📄 main.js cargado');
 
 })();

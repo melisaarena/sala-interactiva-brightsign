@@ -1,155 +1,172 @@
 body {
-margin: 0;
-padding: 0;
-height: 100%;
-background: #000;
-color: #0f0;
-font-family: monospace;
-overflow: hidden;
+  margin: 0;
+  height: 100%;
+  background: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  overflow: hidden;
 }
 
-video {
-width: 100vw;
-height: 100vh;
-object-fit: cover;
-display: block;
+/* Status overlay - top-right corner */
+.status-overlay {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 15px 20px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  z-index: 9999;
+  color: #fff;
+  font-size: 14px;
 }
 
+.status-message {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #4CAF50;
+}
+
+.connection-info {
+  font-size: 14px;
+}
+
+.connection-info span {
+  margin-right: 5px;
+}
+
+#connectionStatus {
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+#connectionStatus.connected {
+  color: #4CAF50;
+  background: rgba(76, 175, 80, 0.2);
+}
+
+#connectionStatus.disconnected {
+  color: #f44336;
+  background: rgba(244, 67, 54, 0.2);
+}
+
+/* Waiting overlay - centered full screen for Slave */
 .waiting-overlay {
-position: fixed;
-top: 0;
-left: 0;
-width: 100vw;
-height: 100vh;
-background: #000;
-display: flex;
-flex-direction: column;
-justify-content: center;
-align-items: center;
-z-index: 1000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  z-index: 9998;
 }
 
 .waiting-message {
-color: #fff;
-font-size: 24px;
-font-weight: bold;
-text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-margin-bottom: 30px;
-}
-
-.clock-display {
-color: #fff;
-font-size: 56px;
-font-weight: bold;
-text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
-font-family: 'Courier New', monospace;
-letter-spacing: 2px;
-margin-bottom: 40px;
-}
-
-.status-info {
-color: #888;
-font-size: 14px;
-text-align: center;
-line-height: 1.5;
-}
-
-.sync-indicator {
-display: inline-block;
-width: 8px;
-height: 8px;
-border-radius: 50%;
-background: #f00;
-margin-right: 8px;
-animation: pulse 2s infinite;
-}
-
-.sync-indicator.connected {
-background: #0f0;
-animation: none;
+  font-size: 42px;
+  font-weight: bold;
+  color: #FFA726;
+  margin-bottom: 30px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  animation: pulse 2s ease-in-out infinite;
 }
 
 @keyframes pulse {
-0%, 100% { opacity: 0.3; }
-50% { opacity: 1; }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
-.hidden {
-display: none !important;
+.clock-display {
+  font-size: 64px;
+  font-weight: 300;
+  color: #fff;
+  margin-bottom: 50px;
+  font-family: 'Courier New', monospace;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
 }
 
-/* GPIO Overlay Styles */
-.gpio-overlay {
-position: fixed;
-top: 20px;
-right: 20px;
-background: rgba(0, 0, 0, 0.9);
-border: 2px solid #0f0;
-border-radius: 10px;
-padding: 15px;
-z-index: 2000;
-min-width: 200px;
-box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+.status-info {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 25px 35px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  min-width: 400px;
 }
 
-.gpio-header {
-color: #0f0;
-font-size: 16px;
-font-weight: bold;
-text-align: center;
-margin-bottom: 15px;
-text-transform: uppercase;
-letter-spacing: 1px;
-border-bottom: 1px solid #0f0;
-padding-bottom: 10px;
+.status-info > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 18px;
 }
 
-.gpio-status {
-display: flex;
-flex-direction: column;
-gap: 8px;
+.status-info > div:last-child {
+  border-bottom: none;
 }
 
-.gpio-pin {
-display: flex;
-justify-content: space-between;
-align-items: center;
-padding: 8px 12px;
-background: rgba(255, 255, 255, 0.05);
-border-radius: 5px;
-border: 1px solid #333;
-transition: all 0.2s ease;
+.sync-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #666;
+  margin-right: 10px;
+  animation: blink 1.5s ease-in-out infinite;
 }
 
-.gpio-pin.active {
-background: rgba(0, 255, 0, 0.1);
-border-color: #0f0;
-box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+.sync-indicator.connected {
+  background: #4CAF50;
+  animation: none;
 }
 
-.gpio-pin-label {
-color: #888;
-font-size: 14px;
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
-.gpio-pin.active .gpio-pin-label {
-color: #fff;
-font-weight: bold;
+.status-connected {
+  color: #4CAF50;
+  font-weight: bold;
 }
 
-.gpio-pin-state {
-font-size: 12px;
-font-weight: bold;
-padding: 3px 10px;
-border-radius: 3px;
+.status-disconnected {
+  color: #FFA726;
+  font-weight: bold;
 }
 
-.gpio-pin-state.on {
-color: #000;
-background: #0f0;
+.sync-good {
+  color: #4CAF50;
+  font-weight: bold;
 }
 
-.gpio-pin-state.off {
-color: #888;
-background: rgba(255, 255, 255, 0.1);
+.sync-warning {
+  color: #FFA726;
+  font-weight: bold;
+}
+
+.quality-excellent {
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+.quality-good {
+  color: #8BC34A;
+  font-weight: bold;
+}
+
+.quality-fair {
+  color: #FFA726;
+  font-weight: bold;
+}
+
+.quality-poor {
+  color: #f44336;
+  font-weight: bold;
 }

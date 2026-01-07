@@ -1,15 +1,14 @@
 {
-  "master": {
-    "slaveServerPort": 8081,
-    "syncDelayMs": 800,
-    "maxSyncAttempts": 5,
-    "verboseLogging": true,
-    "expectedSlaves": 1
+  "projector": {
+    "index": 3,
+    "name": "Master with Remote Control",
+    "note": "Master BrightSign - tiene el remote USB conectado y actúa como servidor WebSocket"
   },
-  "media": {
-    "videoPath": "video.mp4"
+  "websocket": {
+    "port": 8765,
+    "role": "server"
   },
   "externalApp": {
-    "url": "http://192.168.1.9:5173"
+    "url": "http://192.168.1.14:5173"
   }
 }

@@ -44,35 +44,54 @@ function log(line, { verbose = false } = {}) {
 
 // Cargar configuración
 function loadConfig() {
-  let config = {
-    master: { 
-      slaveServerPort: 8081,
-      syncDelayMs: 2000,
-      maxSyncAttempts: 3,
-      verboseLogging: true
-    },
-    media: {
-      videoPath: 'video.mp4'
-    }
-  };
-  
   try {
     const configPath = path.join('/storage/sd', 'config.json');
     const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    config = { ...config, ...configData };
     
-    // Configurar el logging verboso globalmente
-    if (config.master && typeof config.master.verboseLogging !== 'undefined') {
-      setVerboseLogging(config.master.verboseLogging);
-      log(`[CONFIG] Verbose logging: ${config.master.verboseLogging ? 'ACTIVADO' : 'DESACTIVADO'}`);
+    // Nueva estructura con "projector", "websocket", "externalApp"
+    if (!configData.projector) {
+      throw new Error('No se encontró configuración de projector');
     }
     
-    log('[CONFIG] Configuración cargada');
+    // Validar campos requeridos
+    if (!configData.projector.index) {
+      throw new Error('Falta projector.index en configuración');
+    }
+    
+    // Validar WebSocket (diferente para Master vs Slave)
+    if (!configData.websocket) {
+      throw new Error('No se encontró configuración de websocket');
+    }
+    
+    // Master debe tener 'port' y role="server"
+    // Slave debe tener 'masterHost' y role="client"
+    const wsConfig = configData.websocket;
+    if (wsConfig.role === 'server' && !wsConfig.port) {
+      throw new Error('Master requiere websocket.port en configuración');
+    }
+    if (wsConfig.role === 'client' && !wsConfig.masterHost) {
+      throw new Error('Slave requiere websocket.masterHost en configuración');
+    }
+    
+    // Validar externalApp
+    if (!configData.externalApp || !configData.externalApp.url) {
+      throw new Error('No se encontró configuración de externalApp.url');
+    }
+    
+    log(`[CONFIG] ✅ Configuración cargada:`);
+    log(`[CONFIG]    Proyector: ${configData.projector.index} - ${configData.projector.name || 'Sin nombre'}`);
+    if (wsConfig.role === 'server') {
+      log(`[CONFIG]    WebSocket: Server en puerto ${wsConfig.port}`);
+    } else {
+      log(`[CONFIG]    WebSocket: Client conectando a ${wsConfig.masterHost}:${wsConfig.masterPort || 8765}`);
+    }
+    log(`[CONFIG]    App externa: ${configData.externalApp.url}`);
+    
+    return configData;
   } catch (err) {
-    log(`[CONFIG] Usando configuración por defecto: ${err.message}`);
+    log(`[CONFIG] ❌ Error: ${err.message}`);
+    throw err;
   }
-
-  return config;
 }
 
 // Exponer funciones globalmente para que otros scripts puedan usarlas

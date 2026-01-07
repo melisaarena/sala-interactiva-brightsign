@@ -2,23 +2,18 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <title>BrightSign Slave - Synchronized Player</title>
+    <title>BrightSign Sala Interactiva - Slave</title>
     <link rel="stylesheet" href="styles/main.css" />
   </head>
   <body>
-    <!-- Video player (oculto inicialmente) -->
-    <video id="player" loop preload="auto">
-      <source src="media/video.mp4" type="video/mp4" />
-    </video>
-
-    <!-- Overlay de espera -->
+    <!-- Waiting overlay - Shows clock and connection status -->
     <div id="waitingOverlay" class="waiting-overlay">
       <div class="waiting-message">Waiting for Master Signal</div>
       <div id="clockDisplay" class="clock-display">--:--:--</div>
       <div class="status-info">
         <div>
-          <span id="syncIndicator" class="sync-indicator"></span>Connection:
-          <span id="connectionStatus">Connecting...</span>
+          <span id="syncIndicator" class="sync-indicator"></span>
+          Connection: <span id="connectionStatus">Connecting...</span>
         </div>
         <div>Clock Sync: <span id="clockSync">---</span></div>
         <div>Network Delay: <span id="networkDelay">---</span></div>
@@ -26,19 +21,22 @@
       </div>
     </div>
 
-    <!-- iframe para mostrar contenido externo -->
+    <!-- iframe para mostrar contenido externo (React app) -->
     <iframe
       id="externalContent"
-      style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: none; z-index: 9999"
+      style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: none; z-index: 1; display: none"
     ></iframe>
 
-    <!-- Scripts Modularizados -->
+    <script>
+      console.log("[DEBUG] ===== SLAVE BRIGHTSIGN - INICIANDO =====");
+    </script>
+
+    <!-- Load scripts in order: utilities -> connection modules -> main -->
     <script src="js/utils.js"></script>
-    <script src="js/clock-sync.js"></script>
-    <script src="js/master-connection.js"></script>
-    <!-- <script src="js/dashboard-connection.js"></script> -->
-    <script src="js/player.js"></script>
     <script src="js/clock.js"></script>
+    <!-- <script src="js/clock-sync.js"></script> -->
+    <!-- OBSOLETO: no usado en Master-Slave simple -->
+    <script src="js/master-connection.js"></script>
     <script src="js/main.js"></script>
   </body>
 </html>

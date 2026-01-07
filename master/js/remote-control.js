@@ -1,238 +1,150 @@
+/**
+ * Remote Control Handler for Master BrightSign
+ * Broadcasts navigation commands to all slaves via SlaveServer
+ */
 (function () {
+  const { log } = window.Utils;
+  let isEnabled = false;
 
-	const { log } = window.Utils;
-	let isEnabled = false;
+  function initRemoteControl() {
+    log("[REMOTE] 🎮 Control remoto inicializado");
+    isEnabled = true;
+    
+    // Verificar que SlaveServer esté disponible
+    if (!window.SlaveServer) {
+      log("[REMOTE] ❌ SlaveServer not available");
+      return false;
+    }
+    
+    log("[REMOTE] ✅ SlaveServer ready");
+    return true;
+  }
 
-	function initRemoteControl() {
-		log('[REMOTE] Control remoto inicializado');
-		isEnabled = true;
-		return true;
-	}
+  // Listen for keyboard events
+  window.addEventListener("keydown", (event) => {
+    if (!event || !event.keyCode) return;
+    handleBsKeyPress(event.keyCode);
+  });
 
-	window.addEventListener('keydown', (event) => {
-		if (!event || !event.keyCode) return;
-		handleBsKeyPress(event.keyCode);
-	});
+  /**
+   * Handle BrightSign remote control key presses
+   * @param {number} code - Key code from remote control
+   */
+  function handleBsKeyPress(code) {
+    if (!isEnabled) return;
 
-	function forwardKeyToIframe(keyCode) {
-		const iframe = document.getElementById('externalContent');
-		if (!iframe?.contentWindow) return;
+    let mappedKey = null;
 
-		iframe.contentWindow.postMessage({ type: 'keydown', keyCode: keyCode }, '*');
-	}
+    switch (code) {
+      case 48: // Tecla: 0 - Keep-alive
+        log("[REMOTE] Tecla 0 de control presionada (keep-alive)");
+        return;
 
-	function broadcastNavigationToSlaves(keyCode) {
-		if (!window.SlaveServer?.broadcastToSlaves) return;
+      case 49:
+      case 32849: // Tecla 1 - Arriba
+        log(`[REMOTE] Tecla: ${code} → 1 (Arriba)`);
+        mappedKey = "1";
+        break;
 
-		window.SlaveServer.broadcastToSlaves({
-			type: 'navigate_iframe',
-			keyCode: keyCode,
-			masterTime: Date.now()
-		});
-	}
+      case 50:
+      case 32847: // Tecla 2 - Derecha
+        log(`[REMOTE] Tecla: ${code} → 2 (Derecha)`);
+        mappedKey = "2";
+        break;
 
-	function handleBsKeyPress(code) {
-		if (!isEnabled) return;
+      case 51:
+      case 32850: // Tecla 3 - Abajo
+        log(`[REMOTE] Tecla: ${code} → 3 (Abajo)`);
+        mappedKey = "3";
+        break;
 
-		switch (code) {
-			case 48: // Tecla: 0 - 48 Control - Mantener teclado activo
-				log('[REMOTE] Tecla 0 de control presionada (keep-alive)');
-				break;
+      case 52:
+      case 32848: // Tecla 4 - Izquierda
+        log(`[REMOTE] Tecla: ${code} → 4 (Izquierda)`);
+        mappedKey = "4";
+        break;
 
-			case 49: // Tecla: 1 - 49 Enter - Reproducir video
-				executePlayVideoFromHotspot();
-				break;
+      case 53: // Tecla: 5 - Enter/Select
+        log(`[REMOTE] Tecla: ${code} → 5 (Enter/Select)`);
+        mappedKey = "5";
+        break;
 
-			case 50: // Tecla: 2 - Arriba
-			case 51: // Tecla: 3 - Derecha
-			case 52: // Tecla: 4 - Abajo
-			case 53: // Tecla: 5 - Izquierda
-				log(`[REMOTE] Tecla direccional: ${code}`);
-				forwardKeyToIframe(code);
-				broadcastNavigationToSlaves(code);
-				break;
-				
-			case 54: // Tecla: 6 - 54 Idioma - A implementar
-				log('[REMOTE] Tecla idioma presionada (pendiente implementar)');
-				// TODO: Implementar cambio de idioma
-				break;
+      case 54: // Tecla: 6 - Idioma (not implemented yet)
+        log("[REMOTE] Tecla idioma presionada (pendiente implementar)");
+        return;
 
-			// Mantener teclas de teclado para desarrollo/debug
-			case 109: // M - Mostrar/Ocultar Menú
-				toggleExternalContent();
-				break;
-			case 13: // Enter - Reproducir video
-				executePlayVideoFromHotspot();
-				break;
-			case 27: // Escape - Volver al menú
-				returnToMenu();
-				break;
-		}
-	}
+      // Keep debug keyboard keys for development
+      case 38: // Arrow Up
+        mappedKey = "1";
+        break;
+      case 39: // Arrow Right
+        mappedKey = "2";
+        break;
+      case 40: // Arrow Down
+        mappedKey = "3";
+        break;
+      case 37: // Arrow Left
+        mappedKey = "4";
+        break;
+      case 13: // Enter
+        mappedKey = "5";
+        break;
+        
+      default:
+        // Unknown key
+        return;
+    }
 
-	function toggleExternalContent() {
-		try {
-			const iframe = document.getElementById('externalContent');
-			if (!iframe) return;
+    // Send navigation command via SlaveServer broadcast
+    if (mappedKey) {
+      // Calcular nuevo estado basado en la tecla
+      const newState = calculateNewState(mappedKey);
+      
+      if (newState && window.SlaveServer) {
+        log(`[REMOTE] 📤 Broadcasting navigation: ${mappedKey}`);
+        window.SlaveServer.broadcastNavigation({
+          state: newState,
+          direction: getDirection(mappedKey)
+        });
+      } else {
+        log("[REMOTE] ❌ Cannot broadcast: SlaveServer not available");
+      }
+    }
+  }
 
-			if (iframe.style.display === 'none') {
-				const config = getUtilsConfig();
-				if (!config) return;
-				
-				const targetUrl = config.externalApp?.url || '';
-				
-				// Enviar comando a slaves PRIMERO
-				broadcastShowExternalApp();
-				
-				// Luego mostrar en master (para dar tiempo a los slaves)
-				iframe.src = targetUrl;
-				iframe.style.display = 'block';
-				
-				const video = document.getElementById('player');
-				if (video && !video.paused) {
-					video.pause();
-				}
-				
-			} else {
-				returnToSyncScreen();
-			}
-		} catch (err) {
-			log('[REMOTE] Error toggleExternalContent: ' + err.message);
-		}
-	}
+  /**
+   * Calcular nuevo estado basado en la tecla presionada
+   */
+  function calculateNewState(key) {
+    // Por ahora, devolver el estado actual
+    // El React app será quien calcule el estado exacto
+    const currentState = window.SlaveServer?.getCurrentState();
+    
+    return {
+      floorId: currentState?.floorId || 'piso-1',
+      itemId: currentState?.itemId || 'item-1',
+      key: key, // Enviar la tecla para que React la procese
+      lastUpdate: Date.now()
+    };
+  }
 
-	function hideExternalContent() {
-		try {
-			const iframe = document.getElementById('externalContent');
-			if (iframe && iframe.style.display !== 'none') {
-				iframe.style.display = 'none';
-				broadcastHideExternalApp();
-			}
-		} catch (err) {
-			log('[REMOTE] Error hideExternalContent: ' + err.message);
-		}
-	}
+  /**
+   * Obtener dirección basada en la tecla
+   */
+  function getDirection(key) {
+    switch (key) {
+      case '1': return 'up';
+      case '2': return 'right';
+      case '3': return 'down';
+      case '4': return 'left';
+      case '5': return 'select';
+      default: return null;
+    }
+  }
 
-	function broadcastShowExternalApp() {
-		try {
-			if (window.SlaveServer?.broadcastToSlaves) {
-				window.SlaveServer.broadcastToSlaves({
-					type: 'show_external_app',
-					masterTime: Date.now()
-				});
-			}
-		} catch (err) {
-			log('[REMOTE] Error broadcasting show: ' + err.message);
-		}
-	}
-
-	function broadcastHideExternalApp() {
-		try {
-			if (window.SlaveServer?.broadcastToSlaves) {
-				window.SlaveServer.broadcastToSlaves({
-					type: 'hide_external_app',
-					masterTime: Date.now()
-				});
-			}
-		} catch (err) {
-			log('[REMOTE] Error broadcasting hide: ' + err.message);
-		}
-	}
-
-	function getUtilsConfig() {
-		const config = window.Utils?.loadConfig();
-		if (!config) {
-			log('[REMOTE] Error: No se pudo cargar la configuración');
-		}
-		return config || null;
-	}
-
-	function returnToMenu() {
-		try {
-			if (window.Sync?.executeSynchronizedStop) {
-				window.Sync.executeSynchronizedStop();
-			}
-			
-			const iframe = document.getElementById('externalContent');
-			if (iframe) {
-				iframe.style.display = 'block';
-			}
-			
-			if (window.SlaveServer?.broadcastToSlaves) {
-				window.SlaveServer.broadcastToSlaves({
-					type: 'show_menu_only',
-					masterTime: Date.now()
-				});
-			}
-		} catch (err) {
-			log('[REMOTE] Error returnToMenu: ' + err.message);
-		}
-	}
-
-	function returnToSyncScreen() {
-		try {
-			const iframe = document.getElementById('externalContent');
-			if (iframe) {
-				iframe.style.display = 'none';
-			}
-			
-			if (window.Sync?.executeSynchronizedStop) {
-				window.Sync.executeSynchronizedStop();
-			}
-			
-			broadcastHideExternalApp();
-		} catch (err) {
-			log('[REMOTE] Error returnToSyncScreen: ' + err.message);
-		}
-	}
-
-	function executePlayVideoFromHotspot() {
-		try {
-			const iframe = document.getElementById('externalContent');
-			if (!iframe || iframe.style.display === 'none' || !iframe.contentWindow) {
-				return;
-			}
-
-			let videoResponseReceived = false;
-			let responseTimeout = null;
-
-			const handleVideoResponse = function(event) {
-				if (!event.data || event.data.type !== 'video_response') return;
-
-				videoResponseReceived = true;
-				clearTimeout(responseTimeout);
-				window.removeEventListener('message', handleVideoResponse);
-
-				if (event.data.error) {
-					log('[REMOTE] Error: ' + event.data.error);
-					return;
-				}
-
-				const videoFile = event.data.videoFile;
-				const hotspotId = event.data.hotspotId;
-
-				if (window.Sync?.executeSynchronizedVideoPlay) {
-					window.Sync.executeSynchronizedVideoPlay(videoFile, hotspotId);
-				}
-			};
-
-			window.addEventListener('message', handleVideoResponse);
-
-			responseTimeout = setTimeout(function() {
-				if (!videoResponseReceived) {
-					window.removeEventListener('message', handleVideoResponse);
-				}
-			}, 2000);
-
-			iframe.contentWindow.postMessage({ type: 'request_current_video' }, '*');
-
-		} catch (err) {
-			log('[REMOTE] Error executePlayVideoFromHotspot: ' + err.message);
-		}
-	}
-
-	window.RemoteControl = {
-		initRemoteControl
-	};
-
+  // Public API
+  window.RemoteControl = {
+    init: initRemoteControl,
+    isEnabled: () => isEnabled,
+  };
 })();

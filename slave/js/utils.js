@@ -51,44 +51,56 @@ function loadConfig() {
     const configPath = path.join('/storage/sd', 'config.json');
     const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     
-    if (!configData.slave) {
-      throw new Error('No se encontró configuración de slave');
+    // Nueva estructura con "projector", "websocket", "externalApp"
+    if (!configData.projector) {
+      throw new Error('No se encontró configuración de projector');
     }
     
-    const deviceConfig = configData.slave;
-    
-    // Aplicar configuración de verbose logging si está presente
-    if (deviceConfig.verboseLogging !== undefined) {
-      setVerboseLogging(deviceConfig.verboseLogging);
-      log(`[CONFIG] Verbose logging: ${deviceConfig.verboseLogging ? 'ACTIVADO' : 'DESACTIVADO'}`);
-    }
-    
-    deviceConfig.reconnectDelay = deviceConfig.reconnectDelay || 3000;
-    deviceConfig.heartbeatInterval = deviceConfig.heartbeatInterval || 10000;
-    
-    const requiredFields = ['deviceId', 'masterHost', 'masterPort'];
-    const missingFields = requiredFields.filter(field => !deviceConfig[field]);
+    // Validar campos requeridos
+    const requiredFields = ['index'];
+    const missingFields = requiredFields.filter(field => !configData.projector[field]);
     
     if (missingFields.length > 0) {
-      throw new Error(`Faltan campos: ${missingFields.join(', ')}`);
+      throw new Error(`Faltan campos en projector: ${missingFields.join(', ')}`);
     }
     
-    // Agregar externalApp al deviceConfig
-    if (configData.externalApp) {
-      deviceConfig.externalApp = configData.externalApp;
-      log(`[CONFIG] URL externa configurada: ${deviceConfig.externalApp.url}`);
+    // Validar WebSocket (diferente para Master vs Slave)
+    if (!configData.websocket) {
+      throw new Error('No se encontró configuración de websocket');
+    }
+    
+    // Master debe tener 'port' y role="server"
+    // Slave debe tener 'masterHost' y role="client"
+    const wsConfig = configData.websocket;
+    if (wsConfig.role === 'server' && !wsConfig.port) {
+      throw new Error('Master requiere websocket.port en configuración');
+    }
+    if (wsConfig.role === 'client' && !wsConfig.masterHost) {
+      throw new Error('Slave requiere websocket.masterHost en configuración');
+    }
+    
+    // Validar externalApp
+    if (!configData.externalApp || !configData.externalApp.url) {
+      throw new Error('No se encontró configuración de externalApp.url');
+    }
+    
+    log(`[CONFIG] ✅ Configuración cargada:`);
+    log(`[CONFIG]    Proyector: ${configData.projector.index} - ${configData.projector.name || 'Sin nombre'}`);
+    if (wsConfig.role === 'server') {
+      log(`[CONFIG]    WebSocket: Server en puerto ${wsConfig.port}`);
     } else {
-      log('[CONFIG] Advertencia: No se encontró configuración de externalApp');
+      log(`[CONFIG]    WebSocket: Client conectando a ${wsConfig.masterHost}:${wsConfig.masterPort || 8765}`);
     }
+    log(`[CONFIG]    App externa: ${configData.externalApp.url}`);
     
-    return deviceConfig;
+    return configData;
   } catch (err) {
-    log(`[CONFIG] Error: ${err.message}`);
+    log(`[CONFIG] ❌ Error: ${err.message}`);
     throw err;
   }
 }
 
-window.SlaveUtils = {
+window.Utils = {
   log,
   loadConfig,
   setVerboseLogging,

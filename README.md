@@ -10,7 +10,13 @@ Este sistema permite:
 - Mostrar un menú panorámico 360° interactivo en todas las pantallas
 - Reproducir videos sincronizados en todos los dispositivos simultáneamente
 - Navegar por el menú con control remoto
+- **Soporte multi-idioma**: Videos con sufijos de idioma (ej: `intro_es.mp4`, `intro_en.mp4`)
 - Volver automáticamente al menú al finalizar cada video
+
+## 📚 Documentación
+
+- **[LANGUAGE_SUPPORT.md](./LANGUAGE_SUPPORT.md)**: Detalles completos del sistema de idiomas
+- **Este README**: Configuración general y uso del sistema
 
 ## 🏗️ Arquitectura
 
@@ -110,9 +116,6 @@ sala-interactiva-brightsign/
     "slaveServerPort": 8081,
     "syncDelayMs": 800,
     "maxSyncAttempts": 5
-  },
-  "media": {
-    "videoPath": "video.mp4"
   },
   "externalApp": {
     "url": "http://192.168.1.9:5173"
@@ -400,13 +403,16 @@ iframe.contentWindow.postMessage(
 event.source.postMessage(
   {
     type: "video_response",
-    videoFile: "video1.mp4",
+    videoFile: "/floors/floor-1/items/entrance/intro.mp4",
     hotspotId: "hotspot-1",
-    label: "Point of Interest #1",
+    language: "es", // Código de idioma (es, en, pt, etc.)
+    label: "Entrada Principal",
   },
   { targetOrigin: "*" }
 );
 ```
+
+> **Nota sobre idiomas**: El campo `language` es opcional. Si se proporciona, el sistema transformará automáticamente `intro.mp4` → `intro_es.mp4`. Ver [LANGUAGE_SUPPORT.md](./LANGUAGE_SUPPORT.md) para más detalles.
 
 **Master envía eventos de navegación al iframe:**
 
@@ -414,11 +420,31 @@ event.source.postMessage(
 iframe.contentWindow.postMessage(
   {
     type: "keydown",
-    keyCode: 32847, // Flecha derecha
+    keyCode: 51, // Tecla 3 - Derecha
   },
   "*"
 );
 ```
+
+## 🌐 Estructura de Videos Multi-idioma
+
+Para soportar múltiples idiomas, organiza los archivos así:
+
+```
+master/media/
+  floors/
+    floor-1/
+      items/
+        entrance/
+          intro_es.mp4     ← Versión en español
+          intro_en.mp4     ← Versión en inglés
+          intro_pt.mp4     ← Versión en portugués
+        gallery/
+          tour_es.mp4
+          tour_en.mp4
+```
+
+El slave debe tener **exactamente la misma estructura** en `slave/media/`.
 
 ## 📄 Licencia
 

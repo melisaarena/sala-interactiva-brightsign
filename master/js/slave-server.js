@@ -17,6 +17,11 @@ let slaveConnections = new Map();
 let slaveSyncStatus = new Map();
 let dashboardReporter = null;
 let menuAutoShown = false;
+let currentState = null; // Estado actual de navegación
+
+// Buffers para sincronización (en milisegundos)
+const NAVIGATION_BUFFER_MS = 150;
+const VIDEO_BUFFER_MS = 500;
 
 function initSlaveServer(config) {
   if (!WebSocketServer) {
@@ -57,9 +62,19 @@ function initSlaveServer(config) {
       });
     });
     
-    server.listen(config.master.slaveServerPort, () => {
-      log(`[SLAVE-SERVER] Servidor activo en puerto ${config.master.slaveServerPort}`);
+    // Usar nueva estructura de config
+    const port = config.websocket?.port || 8765;
+    server.listen(port, () => {
+      log(`[SLAVE-SERVER] Servidor activo en puerto ${port}`);
     });
+    
+    // Inicializar estado inicial
+    currentState = {
+      floorId: 'piso-1',
+      itemId: 'item-1',
+      lastUpdate: Date.now()
+    };
+    log('[SLAVE-SERVER] Estado inicial:', JSON.stringify(currentState));
 
   } catch (err) {
     log(`[SLAVE-SERVER] Error inicializando: ${err.message}`);
@@ -72,9 +87,10 @@ function handleSlaveMessage(ws, message, config) {
       const deviceId = message.deviceId;
       slaveConnections.set(deviceId, ws);
       slaveSyncStatus.set(deviceId, { 
-        ready: true, 
+        ready: false, // Will be set to true on sync_ready
         lastPing: Date.now(),
-        version: message.version || 'unknown'
+        version: message.version || 'unknown',
+        clockDiff: 0
       });
       
       const masterTime1 = Date.now();
@@ -86,12 +102,31 @@ function handleSlaveMessage(ws, message, config) {
         masterDeviceId: 'master-brightsign',
         syncId: Math.random().toString(36).substr(2, 9)
       }));
+      
+      log(`[SLAVE-SERVER] 🔌 Slave ${deviceId} identificado`);
       break;
 
     case 'sync_ready':
       if (slaveSyncStatus.has(message.deviceId)) {
-        slaveSyncStatus.get(message.deviceId).ready = true;
-        slaveSyncStatus.get(message.deviceId).lastPing = Date.now();
+        const status = slaveSyncStatus.get(message.deviceId);
+        status.ready = true;
+        status.lastPing = Date.now();
+        
+        // Calculate and store clock diff
+        const clockDiff = message.timestamp ? Date.now() - message.timestamp : 0;
+        status.clockDiff = clockDiff;
+        
+        // Send sync confirmation back to slave with clock diff
+        ws.send(JSON.stringify({
+          type: 'sync_confirm',
+          deviceId: message.deviceId,
+          clockDiff: clockDiff,
+          roundTrip: Math.abs(clockDiff) * 2,
+          timestamp: Date.now()
+        }));
+        
+        log(`[SLAVE-SERVER] ✅ Slave ${message.deviceId} ready (clockDiff: ${clockDiff}ms)`);
+        
         checkAndShowMenuOnFirstSync();
       }
       break;
@@ -226,9 +261,90 @@ function setDashboardReporter(reporterFunction) {
   dashboardReporter = reporterFunction;
 }
 
+/**
+ * Enviar navegación sincronizada a todos los slaves
+ */
+function broadcastNavigation(navigationData) {
+  const timestamp = Date.now() + NAVIGATION_BUFFER_MS;
+  
+  // Actualizar estado actual
+  if (navigationData.state) {
+    currentState = {
+      ...navigationData.state,
+      lastUpdate: Date.now()
+    };
+  }
+  
+  const message = {
+    type: 'synchronized_navigation',
+    timestamp: timestamp,
+    state: navigationData.state,
+    direction: navigationData.direction
+  };
+  
+  log('[SLAVE-SERVER] 📤 Broadcasting navigation:', JSON.stringify(message.state));
+  
+  // Broadcast a todos los slaves
+  const sent = broadcastToSlaves(message);
+  
+  // También enviar al iframe del Master
+  sendToMasterIframe(message);
+  
+  return sent;
+}
+
+/**
+ * Enviar reproducción de video sincronizada
+ */
+function broadcastVideoPlay(videoData) {
+  const timestamp = Date.now() + VIDEO_BUFFER_MS;
+  
+  const message = {
+    type: 'synchronized_video_play',
+    timestamp: timestamp,
+    state: videoData.state,
+    videoUrl: videoData.videoUrl,
+    duration: videoData.duration
+  };
+  
+  log('[SLAVE-SERVER] 🎬 Broadcasting video play:', videoData.videoUrl);
+  
+  // Broadcast a todos los slaves
+  const sent = broadcastToSlaves(message);
+  
+  // También enviar al iframe del Master
+  sendToMasterIframe(message);
+  
+  return sent;
+}
+
+/**
+ * Enviar mensaje al iframe del Master vía postMessage
+ */
+function sendToMasterIframe(message) {
+  try {
+    const iframe = document.getElementById('externalContent');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage(message, '*');
+    }
+  } catch (err) {
+    log(`[SLAVE-SERVER] Error enviando a Master iframe: ${err.message}`);
+  }
+}
+
+/**
+ * Obtener estado actual
+ */
+function getCurrentState() {
+  return currentState;
+}
+
 window.SlaveServer = {
   initSlaveServer,
   broadcastToSlaves,
+  broadcastNavigation,
+  broadcastVideoPlay,
+  getCurrentState,
   getReadySlaveCount,
   getSlaveDetails,
   setDashboardReporter

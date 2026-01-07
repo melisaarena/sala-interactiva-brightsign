@@ -1,13 +1,14 @@
 {
-  "slave": {
-    "deviceId": "slave-brightsign-1",
+  "projector": {
+    "index": 2,
+    "name": "Slave Projector 2"
+  },
+  "websocket": {
     "masterHost": "192.168.1.250",
-    "masterPort": 8081,
-    "reconnectDelay": 3000,
-    "heartbeatInterval": 8000,
-    "verboseLogging": true
+    "masterPort": 8765,
+    "role": "client"
   },
   "externalApp": {
-    "url": "http://192.168.1.9:5173"
+    "url": "http://192.168.1.14:5173"
   }
 }
