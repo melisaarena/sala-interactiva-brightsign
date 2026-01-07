@@ -4,8 +4,6 @@
 
 const { log, loadConfig } = window.Utils;
 const { initSlaveServer, getReadySlaveCount, getSlaveDetails } = window.SlaveServer;
-const { initSync, handleRemoteCommand } = window.Sync;
-const { initPlayer } = window.Player;
 const { initRemoteControl } = window.RemoteControl;
 const { initClock } = window.Clock;
 
@@ -70,18 +68,6 @@ async function initSystem() {
     log('[MAIN] Iniciando sistema');
 
     const config = loadConfig();
-
-    const video = document.getElementById('player');
-    const overlay = document.getElementById('readyOverlay');
-
-    if (!video || !overlay) {
-      log('[ERROR] Elementos del DOM no encontrados');
-      return;
-    }
-
-    initPlayer(video);
-
-    initSync(video, overlay);
 
     // Inicializar control remoto USB
     initRemoteControl();

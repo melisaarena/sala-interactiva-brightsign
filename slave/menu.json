@@ -1,0 +1,81 @@
+{
+  "sections": [
+    {
+      "id": "subsuelo",
+      "items": [
+        {
+          "id": "mantenimiento"
+        },
+        {
+          "id": "servicio-edificios"
+        }
+      ]
+    },
+    {
+      "id": "pb",
+      "items": [
+        {
+          "id": "cocina"
+        },
+        {
+          "id": "edificios-historia"
+        }
+      ]
+    },
+    {
+      "id": "piso-1",
+      "items": [
+        {
+          "id": "departamentos"
+        },
+        {
+          "id": "servicios-personales"
+        }
+      ]
+    },
+    {
+      "id": "piso-2",
+      "items": [
+        {
+          "id": "lbd"
+        },
+        {
+          "id": "traduccion"
+        }
+      ]
+    },
+    {
+      "id": "piso-3",
+      "items": [
+        {
+          "id": "sala-comite"
+        },
+        {
+          "id": "sala-entrenamiento"
+        }
+      ]
+    },
+    {
+      "id": "piso-4",
+      "items": [
+        {
+          "id": "envios"
+        },
+        {
+          "id": "servicio"
+        }
+      ]
+    },
+    {
+      "id": "piso-5",
+      "items": [
+        {
+          "id": "habitacion"
+        },
+        {
+          "id": "hcd"
+        }
+      ]
+    }
+  ]
+}

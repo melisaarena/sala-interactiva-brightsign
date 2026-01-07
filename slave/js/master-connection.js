@@ -29,7 +29,7 @@ class MasterConnection {
           type: 'slave_identify',
           deviceId: window.deviceConfig.deviceId,
           version: '1.0.0',
-          capabilities: ['sync_play', 'sync_stop', 'sync_pause'],
+          capabilities: ['iframe_display', 'navigation'],
           timestamp: new Date().toISOString()
         }));
         this.startHeartbeat();
@@ -158,13 +158,7 @@ class MasterConnection {
           }, 1000);
           break;
           
-        case 'sync_exact_start':
-        case 'sync_prepare':
-        case 'sync_stop':
-        case 'sync_pause':
         case 'show_external_app':
-        case 'hide_external_app':
-        case 'show_menu_only':
         case 'navigate_iframe':
           log('[MASTER] Comando recibido: ' + message.type);
           if (this.onSyncCommand) {

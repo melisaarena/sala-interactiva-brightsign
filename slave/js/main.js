@@ -4,7 +4,7 @@
 
 const { log, loadConfig } = window.SlaveUtils;
 
-let clockSync, masterConnection, player, clock;
+let clockSync, masterConnection, clock;
 
 window.onload = function() {
   try {
@@ -21,32 +21,13 @@ window.onload = function() {
     masterConnection = new window.MasterConnection(clockSync);
     masterConnection.connect();
     
-    player = new window.SlavePlayer(clockSync, masterConnection);
-    player.init();
-    
     masterConnection.onSyncCommand = (message) => {
       switch (message.type) {
-        case 'sync_exact_start':
-        case 'sync_prepare':
-          player.scheduleExactPlayback(message);
-          break;
-        case 'sync_stop':
-          player.handleSyncStop();
-          break;
-        case 'sync_pause':
-          player.handleSyncPause();
-          break;
         case 'show_external_app':
           showExternalApp();
           break;
-        case 'hide_external_app':
-          hideExternalApp();
-          break;
-        case 'show_menu_only':
-          showMenuOnly();
-          break;
         case 'navigate_iframe':
-          navigateIframe(message.keyCode);
+          navigateIframe(message.keyCode, message.exactStartTime, message.masterTime, message.bufferMs);
           break;
       }
     };
@@ -71,46 +52,22 @@ function showExternalApp() {
     
     iframe.src = targetUrl;
     iframe.style.display = 'block';
-    
-    const video = document.getElementById('player');
-    if (video && !video.paused) {
-      video.pause();
-    }
   } catch (err) {
     log('[SLAVE] Error showExternalApp: ' + err.message);
   }
 }
 
-function hideExternalApp() {
-  try {
-    const iframe = document.getElementById('externalContent');
-    if (iframe && iframe.style.display !== 'none') {
-      iframe.style.display = 'none';
-    }
-  } catch (err) {
-    log('[SLAVE] Error hideExternalApp: ' + err.message);
-  }
-}
-
-function showMenuOnly() {
-  try {
-    const iframe = document.getElementById('externalContent');
-    if (!iframe) return;
-
-    iframe.style.display = 'block';
-  } catch (err) {
-    log('[SLAVE] Error showMenuOnly: ' + err.message);
-  }
-}
-
-function navigateIframe(keyCode) {
+function navigateIframe(keyCode, exactStartTime, masterTime, bufferMs) {
   try {
     const iframe = document.getElementById('externalContent');
     if (!iframe?.contentWindow) return;
 
     iframe.contentWindow.postMessage({
       type: 'keydown',
-      keyCode: keyCode
+      keyCode: keyCode,
+      exactStartTime: exactStartTime,
+      masterTime: masterTime,
+      bufferMs: bufferMs
     }, '*');
   } catch (err) {
     log('[SLAVE] Error navigateIframe: ' + err.message);

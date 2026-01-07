@@ -8,6 +8,6 @@
     "verboseLogging": true
   },
   "externalApp": {
-    "url": "http://192.168.1.9:5173"
+    "url": "http://192.168.1.14:5173"
   }
 }
