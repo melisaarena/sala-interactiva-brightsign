@@ -10,6 +10,8 @@ try {
 
 let logInitialized = false;
 let verboseLogging = false; // Por defecto desactivado
+let cachedConfig = null; // Cache de configuración
+let cachedMenu = null; // Cache de menú
 
 // Función para configurar el logging verboso
 function setVerboseLogging(enabled) {
@@ -42,8 +44,13 @@ function log(line, { verbose = false } = {}) {
   }
 }
 
-// Cargar configuración
-function loadConfig() {
+// Cargar configuración (con caché)
+function loadConfig(forceReload = false) {
+  // Si ya está cacheada y no se fuerza recarga, devolver el cache
+  if (cachedConfig && !forceReload) {
+    return cachedConfig;
+  }
+
   let config = {
     master: { 
       slaveServerPort: 8081,
@@ -72,12 +79,38 @@ function loadConfig() {
     log(`[CONFIG] Usando configuración por defecto: ${err.message}`);
   }
 
+  // Guardar en cache
+  cachedConfig = config;
   return config;
+}
+
+// Cargar estructura del menú (con caché)
+function loadMenu(forceReload = false) {
+  // Si ya está cacheada y no se fuerza recarga, devolver el cache
+  if (cachedMenu && !forceReload) {
+    return cachedMenu;
+  }
+
+  let menuStructure = null;
+  
+  try {
+    const menuPath = path.join('/storage/sd', 'menu.json');
+    const menuData = fs.readFileSync(menuPath, 'utf8');
+    menuStructure = JSON.parse(menuData);
+    log(`[MENU] Menú cargado - ${menuStructure.sections?.length || 0} secciones`);
+  } catch (err) {
+    log(`[MENU] Error cargando menu.json: ${err.message}`);
+  }
+
+  // Guardar en cache
+  cachedMenu = menuStructure;
+  return menuStructure;
 }
 
 // Exponer funciones globalmente para que otros scripts puedan usarlas
 window.Utils = {
   log,
   loadConfig,
+  loadMenu,
   setVerboseLogging
 };

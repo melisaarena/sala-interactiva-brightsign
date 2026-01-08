@@ -128,6 +128,16 @@ function checkAndShowMenuOnFirstSync() {
   if (stats.ready > 0 && stats.ready === stats.total) {
     menuAutoShown = true;
     
+    // Log detallado de la conexión exitosa
+    const slaveList = [];
+    for (const [deviceId, status] of slaveSyncStatus.entries()) {
+      if (status.ready) {
+        slaveList.push(deviceId);
+      }
+    }
+    log(`[SLAVE-SERVER] ✅ TODOS LOS SLAVES CONECTADOS (${stats.ready}/${stats.total})`);
+    log(`[SLAVE-SERVER] Lista de slaves: ${slaveList.join(', ')}`);
+    
     const iframe = document.getElementById('externalContent');
     if (iframe && iframe.style.display === 'none') {
       const config = window.Utils?.loadConfig();

@@ -8,7 +8,7 @@
     "verboseLogging": true
   },
   "externalApp": {
-    "baseUrl": "http://192.168.1.14:3000",
+    "baseUrl": "http://192.168.1.10:3000",
     "projectorIndex": 4
   }
 }
