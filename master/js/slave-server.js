@@ -91,7 +91,16 @@ function handleSlaveMessage(ws, message, config) {
       if (slaveSyncStatus.has(message.deviceId)) {
         slaveSyncStatus.get(message.deviceId).ready = true;
         slaveSyncStatus.get(message.deviceId).lastPing = Date.now();
-        checkAndShowMenuOnFirstSync();
+        
+        // Si el menú ya fue mostrado (otros slaves ya tienen iframe visible)
+        // enviar al slave que acaba de sincronizar el estado actual - si uno se desconecta y vuelve
+        if (menuAutoShown) {
+          log(`[SLAVE-SERVER] Slave ${message.deviceId} reconectado, enviando estado actual`);
+          sendCurrentStateToSlave(ws);
+        } else {
+          // Primera vez que se sincronizan todos
+          checkAndShowMenuOnFirstSync();
+        }
       }
       break;
 
@@ -156,6 +165,30 @@ function checkAndShowMenuOnFirstSync() {
       type: 'show_external_app',
       masterTime: Date.now()
     });
+  }
+}
+
+function sendCurrentStateToSlave(ws) {
+  try {
+    // 1. Mostrar el iframe
+    ws.send(JSON.stringify({
+      type: 'show_external_app',
+      masterTime: Date.now()
+    }));
+    
+    // 2. Enviar el estado actual del menú
+    const currentMenuState = window.MenuState?.getCurrentState();
+    if (currentMenuState) {
+      ws.send(JSON.stringify({
+        type: 'navigate_iframe',
+        keyCode: '1', 
+        exactStartTime: Date.now() + 100, // Pequeño delay
+        menuState: currentMenuState
+      }));
+      log(`[SLAVE-SERVER] Estado enviado: ${currentMenuState.sectionId}/${currentMenuState.itemId}`);
+    }
+  } catch (err) {
+    log(`[SLAVE-SERVER] Error enviando estado actual: ${err.message}`);
   }
 }
 
