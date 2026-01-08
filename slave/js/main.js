@@ -27,7 +27,7 @@ window.onload = function() {
           showExternalApp();
           break;
         case 'navigate_iframe':
-          navigateIframe(message.keyCode, message.exactStartTime, message.masterTime, message.bufferMs);
+          navigateIframe(message.keyCode, message.exactStartTime, message.masterTime, message.bufferMs, message.menuState);
           break;
       }
     };
@@ -57,7 +57,7 @@ function showExternalApp() {
   }
 }
 
-function navigateIframe(keyCode, exactStartTime, masterTime, bufferMs) {
+function navigateIframe(keyCode, exactStartTime, masterTime, bufferMs, menuState) {
   try {
     const iframe = document.getElementById('externalContent');
     if (!iframe?.contentWindow) return;
@@ -66,8 +66,7 @@ function navigateIframe(keyCode, exactStartTime, masterTime, bufferMs) {
       type: 'keydown',
       keyCode: keyCode,
       exactStartTime: exactStartTime,
-      masterTime: masterTime,
-      bufferMs: bufferMs
+      menuState: menuState // Reenviar el estado del menú
     }, '*');
   } catch (err) {
     log('[SLAVE] Error navigateIframe: ' + err.message);

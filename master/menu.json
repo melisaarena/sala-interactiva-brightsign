@@ -1,4 +1,5 @@
 {
+  "languages": [{ "code": "en" }, { "code": "es" }, { "code": "fr" }],
   "sections": [
     {
       "id": "subsuelo",

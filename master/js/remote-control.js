@@ -2,11 +2,101 @@
 
 	const { log } = window.Utils;
 	let isEnabled = false;
+	let menuState = null;
+	let menuStructure = null;
 
 	function initRemoteControl() {
 		log('[REMOTE] Control remoto inicializado');
 		isEnabled = true;
+		
+		// Cargar configuración inicial
+		const config = getUtilsConfig();
+		if (config?.menu?.initialState) {
+			menuState = {
+				sectionId: config.menu.initialState.sectionId,
+				itemId: config.menu.initialState.itemId,
+				language: config.menu.initialState.language || 'es'
+			};
+			log(`[REMOTE] Estado inicial: ${menuState.sectionId} / ${menuState.itemId} / ${menuState.language}`);
+		}
+		
+		// Cargar estructura del menú
+		loadMenuStructure();
+		
 		return true;
+	}
+
+	function loadMenuStructure() {
+		try {
+			const xhr = new XMLHttpRequest();
+			xhr.open('GET', '/menu.json', false); // Sincrónico para simplificar
+			xhr.send();
+			
+			if (xhr.status === 200) {
+				menuStructure = JSON.parse(xhr.responseText);
+				log('[REMOTE] Estructura de menú cargada');
+			} else {
+				log('[REMOTE] Error cargando menu.json: ' + xhr.status);
+			}
+		} catch (err) {
+			log('[REMOTE] Error: ' + err.message);
+		}
+	}
+
+	function updateMenuState(direction) {
+		// Actualiza sección e item según la dirección
+		// NO modifica el language (se mantiene el actual)
+		if (!menuStructure || !menuState) return;
+
+		const sections = menuStructure.sections;
+		const currentSectionIndex = sections.findIndex(s => s.id === menuState.sectionId);
+		
+		if (currentSectionIndex === -1) return;
+
+		const currentSection = sections[currentSectionIndex];
+		const currentItemIndex = currentSection.items.findIndex(i => i.id === menuState.itemId);
+
+		switch (direction) {
+			case 'up': // Tecla 1 - Sección anterior
+				if (currentSectionIndex > 0) {
+					const newSection = sections[currentSectionIndex - 1];
+					menuState.sectionId = newSection.id;
+					// Mantener el mismo índice de item si existe, sino el primero
+					if (newSection.items[currentItemIndex]) {
+						menuState.itemId = newSection.items[currentItemIndex].id;
+					} else {
+						menuState.itemId = newSection.items[0].id;
+					}
+				}
+				break;
+
+			case 'right': // Tecla 2 - Item siguiente
+				if (currentItemIndex < currentSection.items.length - 1) {
+					menuState.itemId = currentSection.items[currentItemIndex + 1].id;
+				}
+				break;
+
+			case 'down': // Tecla 3 - Sección siguiente
+				if (currentSectionIndex < sections.length - 1) {
+					const newSection = sections[currentSectionIndex + 1];
+					menuState.sectionId = newSection.id;
+					// Mantener el mismo índice de item si existe, sino el primero
+					if (newSection.items[currentItemIndex]) {
+						menuState.itemId = newSection.items[currentItemIndex].id;
+					} else {
+						menuState.itemId = newSection.items[0].id;
+					}
+				}
+				break;
+
+			case 'left': // Tecla 4 - Item anterior
+				if (currentItemIndex > 0) {
+					menuState.itemId = currentSection.items[currentItemIndex - 1].id;
+				}
+				break;
+		}
+
+		log(`[REMOTE] Nuevo estado: ${menuState.sectionId} / ${menuState.itemId} / ${menuState.language}`);
 	}
 
 	window.addEventListener('keydown', (event) => {
@@ -14,7 +104,7 @@
 		handleBsKeyPress(event.keyCode);
 	});
 
-	function forwardKeyToIframe(keyCode, exactStartTime, masterTime, bufferMs) {
+	function forwardKeyToIframe(keyCode, exactStartTime, masterTime, bufferMs, state) {
 		const iframe = document.getElementById('externalContent');
 		if (!iframe?.contentWindow) return;
 
@@ -23,50 +113,58 @@
 			keyCode: keyCode,
 			masterTime: masterTime,
 			exactStartTime: exactStartTime,
-			bufferMs: bufferMs
+			bufferMs: bufferMs,
+			menuState: state // Incluir el estado del menú
 		}, '*');
 	}
 
-	function broadcastNavigationToSlaves(keyCode, exactStartTime, masterTime, bufferMs) {
+	function broadcastNavigationToSlaves(keyCode, exactStartTime, masterTime, bufferMs, state) {
 		if (!window.SlaveServer?.broadcastToSlaves) return;
 
 		window.SlaveServer.broadcastToSlaves({
 			type: 'navigate_iframe',
 			keyCode: keyCode,
-			masterTime: masterTime,
 			exactStartTime: exactStartTime,
-			bufferMs: bufferMs
+			menuState: state // Incluir el estado del menú
 		});
 	}
 
-	function sendSynchronizedNavigation(keyCode) {
+	function sendSynchronizedNavigation(keyCode, direction) {
+		// Actualizar el estado del menú antes de enviar
+		if (direction) {
+			updateMenuState(direction);
+		}
+
 		const config = getUtilsConfig();
-		const syncBuffer = config?.master?.syncDelayMs || 200; // Buffer más corto para navegación
+		const syncBuffer = config?.master?.syncDelayMs || 200;
 		const masterTime = Date.now();
 		const exactStartTime = masterTime + syncBuffer;
 
-		// Enviar al iframe local (master)
-		forwardKeyToIframe(keyCode, exactStartTime, masterTime, syncBuffer);
+		// Enviar al iframe local (master) con el estado actualizado
+		forwardKeyToIframe(keyCode, exactStartTime, masterTime, syncBuffer, menuState);
 		
-		// Broadcast a slaves
-		broadcastNavigationToSlaves(keyCode, exactStartTime, masterTime, syncBuffer);
+		// Broadcast a slaves con el estado actualizado
+		broadcastNavigationToSlaves(keyCode, exactStartTime, masterTime, syncBuffer, menuState);
 	}
 
 	function sendSynchronizedEnter() {
+		// Para Enter, NO actualizar el estado, solo enviarlo como está
 		const config = getUtilsConfig();
-		const syncBuffer = Math.max(config?.master?.syncDelayMs || 800, 1500); // Buffer mayor para video (como en sync.js)
+		const syncBuffer = Math.max(config?.master?.syncDelayMs || 800, 1500);
 		const masterTime = Date.now();
 		const exactStartTime = masterTime + syncBuffer;
 
-		// Enviar al iframe local (master)
-		forwardKeyToIframe("5", exactStartTime, masterTime, syncBuffer);
+		// Enviar al iframe local (master) con el estado actual (sin modificar)
+		forwardKeyToIframe("5", exactStartTime, masterTime, syncBuffer, menuState);
 		
-		// Broadcast a slaves
-		broadcastNavigationToSlaves("5", exactStartTime, masterTime, syncBuffer);
+		// Broadcast a slaves con el estado actual (sin modificar)
+		broadcastNavigationToSlaves("5", exactStartTime, masterTime, syncBuffer, menuState);
 	}
 
 	function handleBsKeyPress(code) {
 		if (!isEnabled) return;
+
+		log(`[REMOTE] Tecla presionada: ${code}`);
 
 		switch (code) {
 			case 48: // Tecla: 0 - 48 Control - Mantener teclado activo
@@ -75,33 +173,33 @@
 
 			case 49:
       		case 32849: // Tecla 1 - Arriba
-				log(`[REMOTE] Tecla direccional: ${code} -> 1 `);
-				sendSynchronizedNavigation("1");
+				log(`[REMOTE] Tecla direccional: ${code} -> 1 (Arriba)`);
+				sendSynchronizedNavigation("1", "up");
 				break;
 			
 			case 50:
       		case 32847: // Tecla 2 - Derecha
-				log(`[REMOTE] Tecla direccional: ${code} -> 2 `);
-				sendSynchronizedNavigation("2");
+				log(`[REMOTE] Tecla direccional: ${code} -> 2 (Derecha)`);
+				sendSynchronizedNavigation("2", "right");
 				break;
 
 			case 51:
       		case 32850: // Tecla 3 - Abajo
-				log(`[REMOTE] Tecla direccional: ${code} -> 3 `);
-				sendSynchronizedNavigation("3");
+				log(`[REMOTE] Tecla direccional: ${code} -> 3 (Abajo)`);
+				sendSynchronizedNavigation("3", "down");
 				break;
 
 			case 52:
       		case 32848: // Tecla 4 - Izquierda
-				log(`[REMOTE] Tecla direccional: ${code} -> 4 `);
-				sendSynchronizedNavigation("4");
+				log(`[REMOTE] Tecla direccional: ${code} -> 4 (Izquierda)`);
+				sendSynchronizedNavigation("4", "left");
 				break;
 
 			case 53: // Tecla: 5 - Enter/Select
         		log(`[REMOTE] Tecla: ${code} → 5 (Enter/Select)`);
 				const iframe = document.getElementById('externalContent');
-				if (!iframe) return toggleExternalContent(); // si no esta iframe lo muestro. 
-				sendSynchronizedEnter(); // Buffer mayor para reproducción de video
+				if (!iframe) return toggleExternalContent(); 
+				sendSynchronizedEnter(); 
 				break;
 
 			case 54: // Tecla: 6 - Idioma (not implemented yet)

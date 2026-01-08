@@ -7,6 +7,13 @@
     "expectedSlaves": 1
   },
   "externalApp": {
-    "url": "http://192.168.1.14:5173"
+    "url": "http://192.168.1.10:5173"
+  },
+  "menu": {
+    "initialState": {
+      "sectionId": "piso-1",
+      "itemId": "departamentos",
+      "language": "es"
+    }
   }
 }
