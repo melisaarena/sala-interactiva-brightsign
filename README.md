@@ -1,104 +1,98 @@
-# Sala Interactiva BrightSign
+# Sala Interactiva - BrightSign
 
-Sistema de reproducción sincronizada de videos y menú panorámico 360° para múltiples pantallas BrightSign (master-slave).
+Sistema de control maestro-esclavo para BrightSign que gestiona la navegación sincronizada de contenido interactivo en múltiples pantallas.
 
 ## 📋 Descripción General
 
-Este sistema permite:
+Este proyecto implementa un sistema de sincronización para dispositivos BrightSign donde:
 
-- Sincronizar múltiples dispositivos BrightSign (1 master + N slaves)
-- Mostrar un menú panorámico 360° interactivo en todas las pantallas
-- Reproducir videos sincronizados en todos los dispositivos simultáneamente
-- Navegar por el menú con control remoto
-- Volver automáticamente al menú al finalizar cada video
+- Un dispositivo **Master** recibe comandos de un control remoto USB
+- Múltiples dispositivos **Slave** se conectan al master vía WebSocket
+- Todos los dispositivos muestran iframes sincronizados de una aplicación web
+- La navegación y reproducción de videos se ejecutan en el mismo instante en todos los dispositivos
 
 ## 🏗️ Arquitectura
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      MASTER BRIGHTSIGN                       │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  Control Remoto USB → Eventos de Teclado            │   │
-│  └─────────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  iframe: Menú Panorámico 360° (React App)          │   │
-│  │  http://192.168.1.9:5173                            │   │
-│  └─────────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  Video Player Sincronizado                          │   │
-│  └─────────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  WebSocket Server (Puerto 8081)                     │   │
-│  │  Coordina sincronización con slaves                 │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              │ WebSocket
-                              ▼
-        ┌──────────────────────────────────────────┐
-        │                                          │
-        ▼                                          ▼
-┌────────────────┐                        ┌────────────────┐
-│ SLAVE 1        │                        │ SLAVE N        │
-│ ┌────────────┐ │                        │ ┌────────────┐ │
-│ │ iframe     │ │                        │ │ iframe     │ │
-│ │ Menu 360°  │ │                        │ │ Menu 360°  │ │
-│ └────────────┘ │                        │ └────────────┘ │
-│ ┌────────────┐ │                        │ ┌────────────┐ │
-│ │ Video      │ │                        │ │ Video      │ │
-│ │ Sincroniz. │ │         ...            │ │ Sincroniz. │ │
-│ └────────────┘ │                        │ └────────────┘ │
-└────────────────┘                        └────────────────┘
+┌─────────────┐
+│   Control   │
+│   Remoto    │
+│    USB      │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────────────────┐
+│      Master BrightSign          │
+│  - Recibe teclas del control    │
+│  - Gestiona estado del menú     │
+│  - Calcula exactStartTime       │
+│  - WebSocket Server (port 8081) │
+│  - Muestra iframe (proyector 0) │
+└────────┬────────────────────────┘
+         │
+         │ WebSocket
+         ├──────────────┬──────────────┐
+         ▼              ▼              ▼
+    ┌─────────┐    ┌─────────┐   ┌─────────┐
+    │ Slave 1 │    │ Slave 2 │   │ Slave N │
+    │(proj 1) │    │(proj 2) │   │(proj N) │
+    └─────────┘    └─────────┘   └─────────┘
+```
+
+└────────────────┘ └────────────────┘
+
 ```
 
 ## 📁 Estructura del Proyecto
 
 ```
+
 sala-interactiva-brightsign/
-├── master/                    # BrightSign Master
-│   ├── autorun.brs           # Punto de entrada BrightScript
-│   ├── config.json           # Configuración del master
-│   ├── events.json           # Configuración de eventos
-│   ├── index.html            # HTML principal
-│   ├── js/
-│   │   ├── main.js           # Coordinador principal
-│   │   ├── remote-control.js # Control remoto USB
-│   │   ├── sync.js           # Sincronización de videos
-│   │   ├── slave-server.js   # Servidor WebSocket para slaves
-│   │   ├── player.js         # Reproductor de video
-│   │   ├── clock.js          # Reloj del sistema
-│   │   └── utils.js          # Utilidades
-│   ├── media/                # Videos para reproducir
-│   │   ├── video1.mp4
-│   │   ├── video2.mp4
-│   │   └── ...
-│   └── styles/
-│       └── main.css
+├── master/ # BrightSign Master
+│ ├── autorun.brs # Punto de entrada BrightScript
+│ ├── config.json # Configuración del master
+│ ├── events.json # Configuración de eventos
+│ ├── index.html # HTML principal
+│ ├── js/
+│ │ ├── main.js # Coordinador principal
+│ │ ├── remote-control.js # Control remoto USB
+│ │ ├── sync.js # Sincronización de videos
+│ │ ├── slave-server.js # Servidor WebSocket para slaves
+│ │ ├── player.js # Reproductor de video
+│ │ ├── clock.js # Reloj del sistema
+│ │ └── utils.js # Utilidades
+│ ├── media/ # Videos para reproducir
+│ │ ├── video1.mp4
+│ │ ├── video2.mp4
+│ │ └── ...
+│ └── styles/
+│ └── main.css
 │
-├── slave/                     # BrightSign Slaves
-│   ├── autorun.brs           # Punto de entrada BrightScript
-│   ├── config.json           # Configuración del slave
-│   ├── events.json           # Configuración de eventos
-│   ├── index.html            # HTML principal
-│   ├── js/
-│   │   ├── main.js           # Coordinador principal
-│   │   ├── player.js         # Reproductor sincronizado
-│   │   ├── master-connection.js # Conexión WebSocket al master
-│   │   ├── clock.js          # Reloj sincronizado
-│   │   ├── clock-sync.js     # Sincronización de reloj
-│   │   └── utils.js          # Utilidades
-│   ├── media/                # MISMOS videos que el master
-│   │   ├── video1.mp4
-│   │   ├── video2.mp4
-│   │   └── ...
-│   └── styles/
-│       └── main.css
+├── slave/ # BrightSign Slaves
+│ ├── autorun.brs # Punto de entrada BrightScript
+│ ├── config.json # Configuración del slave
+│ ├── events.json # Configuración de eventos
+│ ├── index.html # HTML principal
+│ ├── js/
+│ │ ├── main.js # Coordinador principal
+│ │ ├── player.js # Reproductor sincronizado
+│ │ ├── master-connection.js # Conexión WebSocket al master
+│ │ ├── clock.js # Reloj sincronizado
+│ │ ├── clock-sync.js # Sincronización de reloj
+│ │ └── utils.js # Utilidades
+│ ├── media/ # MISMOS videos que el master
+│ │ ├── video1.mp4
+│ │ ├── video2.mp4
+│ │ └── ...
+│ └── styles/
+│ └── main.css
 │
-└── setup/                     # Configuración de red (opcional)
-    ├── autorun.brs
-    ├── setup.json
-    └── ...
-```
+└── setup/ # Configuración de red (opcional)
+├── autorun.brs
+├── setup.json
+└── ...
+
+````
 
 ## ⚙️ Configuración
 
@@ -111,14 +105,11 @@ sala-interactiva-brightsign/
     "syncDelayMs": 800,
     "maxSyncAttempts": 5
   },
-  "media": {
-    "videoPath": "video.mp4"
-  },
   "externalApp": {
     "url": "http://192.168.1.9:5173"
   }
 }
-```
+````
 
 - **`slaveServerPort`**: Puerto del servidor WebSocket para slaves
 - **`syncDelayMs`**: Buffer mínimo de sincronización (ms) - Aumentar si videos no sincronizan

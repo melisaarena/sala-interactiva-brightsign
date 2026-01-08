@@ -185,7 +185,7 @@ function sendCurrentStateToSlave(ws) {
         exactStartTime: Date.now() + 100, // Pequeño delay
         menuState: currentMenuState
       }));
-      log(`[SLAVE-SERVER] Estado enviado: ${currentMenuState.sectionId}/${currentMenuState.itemId}`);
+      log(`[SLAVE-SERVER] Estado enviado para reconectar: ${currentMenuState.sectionId}/${currentMenuState.itemId}`);
     }
   } catch (err) {
     log(`[SLAVE-SERVER] Error enviando estado actual: ${err.message}`);

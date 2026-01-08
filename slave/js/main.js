@@ -68,7 +68,7 @@ function navigateIframe(keyCode, exactStartTime, menuState) {
     const iframe = document.getElementById('externalContent');
     if (!iframe?.contentWindow) return;
 
-    message = {
+    const message = {
       type: 'keydown',
       keyCode: keyCode,
       exactStartTime: exactStartTime,

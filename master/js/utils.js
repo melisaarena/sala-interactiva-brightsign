@@ -58,9 +58,6 @@ function loadConfig(forceReload = false) {
       maxSyncAttempts: 3,
       verboseLogging: true
     },
-    media: {
-      videoPath: 'video.mp4'
-    }
   };
   
   try {

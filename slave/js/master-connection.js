@@ -160,6 +160,7 @@ class MasterConnection {
           
         case 'show_external_app':
         case 'navigate_iframe':
+        case 'play_video':
           log('[MASTER] Comando recibido: ' + message.type);
           if (this.onSyncCommand) {
             this.onSyncCommand(message);
