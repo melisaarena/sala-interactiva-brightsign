@@ -79,7 +79,7 @@
 			? window.MenuState.updateMenuState(direction)
 			: window.MenuState.getCurrentState();
 
-		const config = window.Utils.loadConfig(); // Ahora usa caché automáticamente
+		const config = window.Utils.loadConfig(); 
 		const syncBuffer = config?.master?.syncDelayMs || 200;
 		const exactStartTime = Date.now() + syncBuffer;
 
@@ -93,7 +93,7 @@
 	function sendSynchronizedEnter() {
 		// Para Enter, NO actualizar el estado, solo enviarlo como está
 		const menuState = window.MenuState.getCurrentState();
-		const config = window.Utils.loadConfig(); // Ahora usa caché automáticamente
+		const config = window.Utils.loadConfig(); 
 		const syncBuffer = Math.max(config?.master?.syncDelayMs || 800, 1500);
 		const exactStartTime = Date.now() + syncBuffer;
 

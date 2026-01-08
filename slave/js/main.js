@@ -27,7 +27,10 @@ window.onload = function() {
           showExternalApp();
           break;
         case 'navigate_iframe':
-          navigateIframe(message.keyCode, message.exactStartTime, message.masterTime, message.bufferMs, message.menuState);
+          navigateIframe(message.keyCode, message.exactStartTime, message.menuState);
+          break;
+        case 'play_video':
+          playVideo(message.floorId, message.itemId, message.exactStartTime);
           break;
       }
     };
@@ -60,19 +63,40 @@ function showExternalApp() {
   }
 }
 
-function navigateIframe(keyCode, exactStartTime, masterTime, bufferMs, menuState) {
+function navigateIframe(keyCode, exactStartTime, menuState) {
   try {
     const iframe = document.getElementById('externalContent');
     if (!iframe?.contentWindow) return;
 
-    iframe.contentWindow.postMessage({
+    message = {
       type: 'keydown',
       keyCode: keyCode,
       exactStartTime: exactStartTime,
-      menuState: menuState // Reenviar el estado del menú
-    }, '*');
+      menuState: menuState
+    };
+
+    iframe.contentWindow.postMessage(message, '*');
+    log('[SLAVE] Enviando mensaje al iframe: ' + JSON.stringify(message));
   } catch (err) {
     log('[SLAVE] Error navigateIframe: ' + err.message);
+  }
+}
+
+function playVideo(floorId, itemId, exactStartTime) {
+  try {
+    const iframe = document.getElementById('externalContent');
+    if (!iframe?.contentWindow) return;
+
+    const message = {
+      type: 'play_video',
+      floorId: floorId,
+      itemId: itemId,
+      exactStartTime: exactStartTime
+    };
+    iframe.contentWindow.postMessage(message, '*');
+    log('[SLAVE] Enviando mensaje al iframe: ' + JSON.stringify(message));
+  } catch (err) {
+    log('[SLAVE] Error playVideo: ' + err.message);
   }
 }
 
