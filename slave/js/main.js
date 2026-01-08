@@ -48,10 +48,13 @@ function showExternalApp() {
     if (!iframe) return;
 
     const config = window.deviceConfig;
-    const targetUrl = config.externalApp?.url || '';
+    const baseUrl = config.externalApp?.baseUrl || 'http://localhost:3000';
+    const projectorIndex = config.externalApp?.projectorIndex || 0;
+    const targetUrl = `${baseUrl}/#/brightsign/display?projectorIndex=${projectorIndex}`;
     
     iframe.src = targetUrl;
     iframe.style.display = 'block';
+    log('[SLAVE] ✓ Iframe visible con URL: ' + targetUrl);
   } catch (err) {
     log('[SLAVE] Error showExternalApp: ' + err.message);
   }

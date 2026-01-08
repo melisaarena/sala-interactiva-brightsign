@@ -7,7 +7,8 @@
     "expectedSlaves": 1
   },
   "externalApp": {
-    "url": "http://192.168.1.10:5173"
+    "baseUrl": "http://192.168.1.14:3000",
+    "projectorIndex": 3
   },
   "menu": {
     "initialState": {

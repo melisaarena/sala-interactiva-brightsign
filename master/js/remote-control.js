@@ -108,14 +108,17 @@
 		const iframe = document.getElementById('externalContent');
 		if (!iframe?.contentWindow) return;
 
-		iframe.contentWindow.postMessage({ 
+		const message = { 
 			type: 'keydown', 
 			keyCode: keyCode,
 			masterTime: masterTime,
 			exactStartTime: exactStartTime,
 			bufferMs: bufferMs,
 			menuState: state // Incluir el estado del menú
-		}, '*');
+		};
+
+		log('[REMOTE] Enviando mensaje al iframe: ' + JSON.stringify(message));
+		iframe.contentWindow.postMessage(message, '*');
 	}
 
 	function broadcastNavigationToSlaves(keyCode, exactStartTime, masterTime, bufferMs, state) {
@@ -198,8 +201,11 @@
 			case 53: // Tecla: 5 - Enter/Select
         		log(`[REMOTE] Tecla: ${code} → 5 (Enter/Select)`);
 				const iframe = document.getElementById('externalContent');
-				if (!iframe) return toggleExternalContent(); 
-				sendSynchronizedEnter(); 
+				if (!iframe || iframe.style.display === 'none') {
+					toggleExternalContent(); // Si no existe o está oculto, mostrarlo
+				} else {
+					sendSynchronizedEnter(); // Si está visible, enviar tecla Enter
+				}
 				break;
 
 			case 54: // Tecla: 6 - Idioma (not implemented yet)
@@ -217,7 +223,9 @@
 				const config = getUtilsConfig();
 				if (!config) return;
 				
-				const targetUrl = config.externalApp?.url || '';
+				const baseUrl = config.externalApp?.baseUrl || 'http://localhost:3000';
+				const projectorIndex = config.externalApp?.projectorIndex || 0;
+				const targetUrl = `${baseUrl}/#/brightsign/display?projectorIndex=${projectorIndex}`;
 				
 				// Enviar comando a slaves PRIMERO
 				broadcastShowExternalApp();
@@ -225,6 +233,7 @@
 				// Luego mostrar en master (para dar tiempo a los slaves)
 				iframe.src = targetUrl;
 				iframe.style.display = 'block';
+				log('[REMOTE] ✓ Iframe visible manualmente con URL: ' + targetUrl);
 				
 			} 
 		} catch (err) {

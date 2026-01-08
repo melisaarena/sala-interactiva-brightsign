@@ -15,7 +15,6 @@ try {
 let slaveServer = null;
 let slaveConnections = new Map();
 let slaveSyncStatus = new Map();
-let dashboardReporter = null;
 let menuAutoShown = false;
 
 function initSlaveServer(config) {
@@ -133,8 +132,13 @@ function checkAndShowMenuOnFirstSync() {
     if (iframe && iframe.style.display === 'none') {
       const config = window.Utils?.loadConfig();
       if (config) {
-        iframe.src = config.externalApp?.url || '';
+        const baseUrl = config.externalApp?.baseUrl || 'http://localhost:3000';
+        const projectorIndex = config.externalApp?.projectorIndex || 0;
+        const fullUrl = `${baseUrl}/#/brightsign/display?projectorIndex=${projectorIndex}`;
+        
+        iframe.src = fullUrl;
         iframe.style.display = 'block';
+        log('[SLAVE-SERVER] ✓ Iframe visible con URL: ' + fullUrl);
       }
     }
     
@@ -159,10 +163,6 @@ function broadcastToSlaves(message) {
         log(`[SLAVE-SERVER] Error enviando a ${deviceId}: ${err.message}`);
       }
     }
-  }
-  
-  if (dashboardReporter) {
-    dashboardReporter(successCount, slaveConnections.size, slaveSyncStatus, slaveConnections);
   }
   
   return successCount;
@@ -222,16 +222,11 @@ function getSlaveDetails() {
   return slaves;
 }
 
-function setDashboardReporter(reporterFunction) {
-  dashboardReporter = reporterFunction;
-}
-
 window.SlaveServer = {
   initSlaveServer,
   broadcastToSlaves,
   getReadySlaveCount,
-  getSlaveDetails,
-  setDashboardReporter
+  getSlaveDetails
 };
 
 })(); 
